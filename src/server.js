@@ -1,4 +1,5 @@
 require("express-async-errors");
+const database = require("./database/sqlite")
 
 const AppError = require("./utils/AppError")
 
@@ -7,9 +8,14 @@ const express = require("express");
 const routes = require("./routes"); /* If there isn't any name specifying the file, it will automatically open index.js */
 
 const app = express();
+
+
 app.use(express.json());
 
+
 app.use(routes);
+
+database();
 
 app.use(( error, req, res, next) => {
   if(error instanceof AppError ){

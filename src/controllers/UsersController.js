@@ -39,8 +39,8 @@ class UsersController {
       throw new AppError("This e-mail is already being used!");
     }
 
-    user.name = name;
-    user.email = email;
+    user.name = name ?? user.name; /* Now, if the name or -mail are empty, it will keep the old e-mail/name */
+    user.email = email ?? user.email;
 
     if( password && !old_password){
       throw new AppError("You need to inform the old password in order to create a new password")

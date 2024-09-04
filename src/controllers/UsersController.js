@@ -1,4 +1,4 @@
-const { hash } = require("bcryptjs")
+const { hash, compare } = require("bcryptjs")
 const AppError = require ("../utils/AppError");
 const sqliteConnection = require("../database/sqlite");
 
@@ -23,7 +23,7 @@ class UsersController {
   }
 
   async update(req, res){
-    const { name, email } = req.body;
+    const { name, email, password, old_password } = req.body;
     const { id } = req.params;
 
     const database = await sqliteConnection();
@@ -42,13 +42,28 @@ class UsersController {
     user.name = name;
     user.email = email;
 
+    if( password && !old_password){
+      throw new AppError("You need to inform the old password in order to create a new password")
+    }
+
+    if(password && old_password){
+      const checkOldPassword = await compare(old_password, user.password);
+
+      if(!checkOldPassword) {
+        throw new AppError("The old password informed, isn't equal to the account's password");
+      }
+
+      user.password = await hash(password, 8);
+    }
+
     await database.run(`
       UPDATE users SET
       name = ?,
       email = ?,
+      password = ?,
       updated_at = ?
       WHERE id = ?
-    `, [user.name, user.email, new Date(), id]);
+    `, [user.name, user.email, user.password, new Date(), id]);
 
     return res.status(200).json();
   }

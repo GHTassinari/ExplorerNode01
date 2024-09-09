@@ -11,7 +11,7 @@ class NotesController {
       user_id,
     });
 
-    const linksInsert = links.map(link => {
+    const linksInsert = links.map((link) => {
       return {
         note_id,
         url: link,
@@ -20,11 +20,11 @@ class NotesController {
 
     await knex("links").insert(linksInsert);
 
-    const tagsInsert = tags.map(name => {
+    const tagsInsert = tags.map((name) => {
       return {
         note_id,
         name,
-        user_id
+        user_id,
       };
     });
 
@@ -33,21 +33,23 @@ class NotesController {
     res.json();
   }
 
-  async show(req, res){
+  async show(req, res) {
     const { id } = req.params;
-    
+
     const note = await knex("notes").where({ id }).first();
-    const tags = await knex("tags").where({ note_id: id}).orderBy("name");
-    const links = await knex("links").where({ note_id: id}).orderBy("created_at");
+    const tags = await knex("tags").where({ note_id: id }).orderBy("name");
+    const links = await knex("links")
+      .where({ note_id: id })
+      .orderBy("created_at");
 
     return res.json({
       ...note,
       tags,
-      links
+      links,
     });
   }
 
-  async delete(req, res){
+  async delete(req, res) {
     const { id } = req.params;
 
     await knex("notes").where({ id }).delete();
@@ -55,15 +57,32 @@ class NotesController {
     return res.json();
   }
 
-  async index(req, res){
-    const { title, user_id } = req.query;
+  async index(req, res) {
+    const { title, user_id, tags } = req.query;
 
-    const notes = await knex("notes")
-    .where({ user_id })
-    .whereLike("title", `%${title}%`)
-    .orderBy("title");
+    let notes;
 
-    return res.json(notes );
+    if (tags) {
+      const filterTags = tags.split(",").map((tag) => tag.trim());
+
+      notes = await knex("tags")
+      .select([
+        "notes.id",
+        "notes.title",
+        "notes.user_id",
+      ])
+      .where("notes.user_id", user_id)
+      .whereLike("notes.title", `%${title}%`)
+      .whereIn("name", filterTags)
+      .innerJoin("notes", "notes.id", "tags.note_id")
+      .orderBy("notes.title");
+    } else {
+      notes = await knex("notes")
+        .where({ user_id })
+        .whereLike("title", `%${title}%`)
+        .orderBy("title");
+    }
+    return res.json(notes);
   }
 }
 
